@@ -173,6 +173,7 @@ flowchart TD
   Scripts -. monitor .-> Orchestrate
   Scripts -. monitor .-> MCPServer
 
+
 ```
 
 1. **MCP Server** (Python, FastMCP) handles all LLM calls to watsonx.ai.
