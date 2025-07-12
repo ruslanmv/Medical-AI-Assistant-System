@@ -1,0 +1,3 @@
+[submodule "watsonx-medical-mcp-server"]
+	path = watsonx-medical-mcp-server
+	url = https://github.com/ruslanmv/watsonx-medical-mcp-server.git
