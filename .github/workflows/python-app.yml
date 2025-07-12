@@ -1,0 +1,47 @@
+name: Python CI – Medical AI Assistant System
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11"]
+
+    env:
+      # These come from your repository secrets
+      WATSONX_APIKEY: ${{ secrets.WATSONX_APIKEY }}
+      PROJECT_ID:     ${{ secrets.PROJECT_ID }}
+      WATSONX_URL:    ${{ secrets.WATSONX_URL }}   # omit or keep blank if not set
+      WATSONX_MODE:   live                         # use “mock” to skip real calls
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive          # pulls watsonx-medical-mcp-server
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install system build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential
+
+      - name: Bootstrap with Makefile
+        run: |
+          make setup      # clones MCP if needed & installs all Python deps
+
+      - name: Lint + Tests (make check)
+        run: |
+          source .venv/bin/activate
+          make check      # flake8 + black --check + pytest
