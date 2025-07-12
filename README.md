@@ -112,7 +112,68 @@ medical-ai-assistant-system/
 
 ## 🏗️ Architecture Overview
 
-![architecture diagram](docs/assets/architecture.png)
+```mermaid
+flowchart TD
+  %% ─────────────────────────────
+  %%  Style helpers
+  %% ─────────────────────────────
+  classDef comp fill:#f0f6ff,stroke:#0077c8,stroke-width:1px,rx:6,ry:6
+  classDef agent fill:#fff7e8,stroke:#e96d00,stroke-width:1px,rx:6,ry:6
+  classDef infra fill:#f8f9fa,stroke:#666,stroke-width:1px,rx:4,ry:4,font-style:italic
+
+  %% ─────────────────────────────
+  %%  Nodes
+  %% ─────────────────────────────
+  User([User / Chat UI])
+
+  subgraph Orchestrate["IBM watsonx Orchestrate"]
+    direction TB
+    Toolkit["Medical MCP Toolkit"]:::comp
+    Coordinator["Medical&nbsp;Coordinator<br>(routing)"]:::agent
+    Triage["Emergency&nbsp;Triage<br>(critical escalation)"]:::agent
+    class Orchestrate comp
+  end
+
+  subgraph Specialists["Specialist Agents"]
+    direction TB
+    Pediatrics["Pediatrics"]:::agent
+    Endocrinology["Endocrinology"]:::agent
+    Hypertension["Hypertension"]:::agent
+    Asthma["Asthma"]:::agent
+    Hepatology["Hepatology"]:::agent
+    Obstetrics["Obstetrics"]:::agent
+    Parkinsons["Parkinson's"]:::agent
+    Oncology["Oncology"]:::agent
+    GenMed["General&nbsp;Medicine"]:::agent
+    Cardiology["Cardiology"]:::agent
+  end
+
+  subgraph MCP["watsonx-medical-mcp-server (repo)"]
+    direction TB
+    MCPServer["FastMCP Server<br>(Python 3.11)"]:::comp
+    tools["Tools:<br/>• chat_with_watsonx<br/>• analyze_medical_symptoms<br/>• summaries / history"]:::infra
+  end
+
+  Watsonx(["IBM watsonx.ai<br/>Foundation Model"]):::infra
+  Scripts["Health-Check / Monitoring / Deploy Scripts"]:::infra
+
+  %% ─────────────────────────────
+  %%  Edges
+  %% ─────────────────────────────
+  User --> |"chat"| Orchestrate
+  Orchestrate --> |"tool invoke"| Toolkit
+  Toolkit --> MCPServer
+  Orchestrate --> Coordinator
+  Orchestrate --> Triage
+  Coordinator --> Specialists
+  Triage --> Coordinator
+  Specialists --> MCPServer
+
+  MCPServer --> |"LLM calls"| Watsonx
+  Scripts -. monitor .-> Orchestrate
+  Scripts -. monitor .-> MCPServer
+
+```
 
 1. **MCP Server** (Python, FastMCP) handles all LLM calls to watsonx.ai.
 2. **watsonx Orchestrate** imports the server as a **toolkit** and each YAML file as an **agent**.
