@@ -25,3 +25,4 @@ wheels/
 backup/
 copy *.
 * copy
+* copy *

@@ -27,7 +27,7 @@ medical-ai-assistant-system/
 ├── watsonx-medical-mcp-server/   # cloned MCP server (FastMCP, watsonx.ai tools)
 │   ├── server.py                 # MCP entry-point (STDIO)
 │   └── …                         # its own Makefile, tests, docs
-├── medical_agents/               # YAML definitions for all agents
+├── agents/                       # YAML definitions for all agents
 ├── scripts/
 │   ├── deploy.sh                 # One-command full deployment
 │   ├── deploy_specialists.sh     # Import / update specialist agents only
@@ -221,25 +221,33 @@ and publish with `-p 8000:8000`.
 
 ```text
 # ── Bootstrap ───────────────────────────────────────────────────────────────
-make setup              # Install/verify BOTH envs → ./venv (Orch) + MCP/.venv
-make orch-setup         # Create ./venv and install Watsonx Orchestrate only
-make mcp-setup          # Create watsonx-medical-mcp-server/.venv only
-make init-mcp           # Ensure MCP repo present (clone / submodule)
-make update-mcp         # Pull latest commit inside MCP repo
-make reinstall          # Wipe both envs and rebuild from scratch
+make setup              # Install / verify BOTH envs → watsonx-orchestrate/venv + MCP/.venv
+
+# Orchestrate stack
+make init-orch          # Clone Installer-Watsonx-Orchestrate repo (automatic branch)
+make update-orch        # Pull latest commit in watsonx-orchestrate
+make orch-setup         # Build / update Orchestrate env only  (runs `make install` inside repo)
+
+# MCP stack
+make init-mcp           # Clone / init watsonx-medical-mcp-server repo (or submodule)
+make update-mcp         # Pull latest commit in MCP repo
+make mcp-setup          # Build / update MCP env only          (runs `make setup` inside repo)
+
+make reinstall          # 🔄 Wipe BOTH envs and rebuild from scratch
 
 # ── Servers & Application ───────────────────────────────────────────────────
-make start              # 🚀 Start the watsonx Orchestrate server (Docker-compose)
+make start              # 🚀 Start the watsonx Orchestrate server
 make run                # 🏃 Import agents/tools & launch Orchestrate app
 make stop               # 🛑 Stop Orchestrate server & containers
 make purge              # 🔥 Remove ALL Orchestrate containers & images
+
 make run-mcp            # 🚀 Start the MCP server locally (STDIO)
 
 # ── Development Workflow ────────────────────────────────────────────────────
-make lint               # flake8 + black --check  (uses ./venv)
+make lint               # flake8 + black --check  (runs in Orchestrate env)
 make format             # Auto-format with black
 make test               # Run pytest suite
-make check              # Lint + tests (CI green-light)
+make check              # Lint + tests  (CI green-light)
 
 # ── Deploy & Ops Helpers ────────────────────────────────────────────────────
 make deploy             # One-command full deploy (toolkit + 12 agents)
@@ -255,6 +263,7 @@ make docker-shell       # Drop into /bin/bash inside the image
 
 # ── House-keeping ───────────────────────────────────────────────────────────
 make clean              # Remove BOTH virtual-envs & Python caches
+
 ```
 
 

@@ -1,47 +1,45 @@
 # Makefile — Medical AI Assistant System
 #
-# • Creates a Python 3.11 virtual-env in .venv and installs:
-#     – watsonx-medical-mcp-server requirements
-#     – Watsonx Orchestrate (scripts/install.sh) into the **same** venv
-# • Operates two servers:
-#     – MCP server   → make run-mcp
-#     – Orchestrate  → make start / run / stop / purge
-# • Provides lint, test, Docker, and housekeeping helpers.
+# Two independent components
+# ─────────────────────────
+# 1. watsonx-orchestrate        → cloned into ./watsonx-orchestrate
+#    • Its own Makefile and venv (./watsonx-orchestrate/venv)
+# 2. watsonx-medical-mcp-server → cloned / submodule in ./watsonx-medical-mcp-server
+#    • Its own Makefile and venv (./watsonx-medical-mcp-server/.venv)
+# ------------------------------------------------------------------------------
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Config
+# Global settings
 # ──────────────────────────────────────────────────────────────────────────────
-SHELL           := /bin/bash            # bash required for `source`
+SHELL          := /bin/bash
+PYTHON_VERSION ?= 3.11
 
-PYTHON_VERSION  ?= 3.11
-VENV            := .venv
-STAMP           := $(VENV)/.install_complete
-PYTHON_VENV     := $(VENV)/bin/python
+# ── MCP server ────────────────────────────────────────────────────────────────
+MCP_REPO_URL   := https://github.com/ruslanmv/watsonx-medical-mcp-server.git
+MCP_DIR        := watsonx-medical-mcp-server
+MCP_VENV       := $(MCP_DIR)/.venv
+MCP_PYTHON     := $(MCP_VENV)/bin/python
+SERVER_MAIN    := $(MCP_DIR)/server.py
 
-# MCP server
-MCP_REPO_URL    := https://github.com/ruslanmv/watsonx-medical-mcp-server.git
-MCP_DIR         := watsonx-medical-mcp-server
-REQ_FILE        := $(MCP_DIR)/requirements.txt
-SERVER_MAIN     := $(MCP_DIR)/server.py
+# ── Watsonx Orchestrate installer ─────────────────────────────────────────────
+ORCH_REPO_URL  := https://github.com/ruslanmv/Installer-Watsonx-Orchestrate.git
+ORCH_BRANCH    := automatic
+ORCH_DIR       := watsonx-orchestrate
+ORCH_VENV      := $(ORCH_DIR)/venv
+ORCH_PYTHON    := $(ORCH_VENV)/bin/python
 
-# Watsonx Orchestrate scripts
-ORCH_INSTALL_SCRIPT := scripts/install.sh
-ORCH_START_SCRIPT   := scripts/start.sh
-ORCH_RUN_SCRIPT     := scripts/run.sh
-ORCH_STOP_SCRIPT    := scripts/stop.sh
-ORCH_PURGE_SCRIPT   := scripts/purge.sh
-
-IMAGE           := medical-ai-assistant-system:latest
-
-# Project helper scripts
+# ── Helper scripts in this repository ────────────────────────────────────────
 DEPLOY_SCRIPT          := scripts/deploy.sh
 DEPLOY_SPECIALISTS     := scripts/deploy_specialists.sh
 SYSTEM_HEALTH_CHECK    := scripts/system_health_check.sh
 MONITOR_SCRIPT         := scripts/monitor_agents.py
 COLLAB_TEST_SCRIPT     := scripts/test_collaboration.py
 
+# ── Docker image tag ─────────────────────────────────────────────────────────
+IMAGE := medical-ai-assistant-system:latest
+
 # ──────────────────────────────────────────────────────────────────────────────
-# System checks
+# System check
 # ──────────────────────────────────────────────────────────────────────────────
 PYTHON_SYSTEM := $(shell command -v python$(PYTHON_VERSION))
 ifeq ($(PYTHON_SYSTEM),)
@@ -53,7 +51,9 @@ endif
 # ──────────────────────────────────────────────────────────────────────────────
 .PHONY: \
   help \
-  init-mcp update-mcp setup install reinstall clean \
+  init-orch update-orch orch-setup \
+  init-mcp  update-mcp  mcp-setup \
+  setup reinstall clean \
   start run stop purge run-mcp \
   deploy deploy-specialists health-check monitor collab-test \
   lint format check-format test check \
@@ -68,42 +68,91 @@ help:
 	@echo "Makefile — Medical AI Assistant System"
 	@echo ""
 	@echo "Bootstrap:"
-	@echo "  init-mcp            Ensure watsonx-medical-mcp-server code is present."
-	@echo "  update-mcp          Pull latest MCP commit."
-	@echo "  setup               Create/update virtual environment (installs MCP + Orchestrate)."
-	@echo "  reinstall           Re-create the virtual environment from scratch."
+	@echo "  init-orch          Clone watsonx-orchestrate installer repo."
+	@echo "  update-orch        Pull latest commit in watsonx-orchestrate."
+	@echo "  orch-setup         Install watsonx-orchestrate (branch 'automatic')."
 	@echo ""
-	@echo "Servers:"
-	@echo "  run-mcp             🚀 Start the MCP server (stdio)."
-	@echo "  start               🚀 Start the watsonx Orchestrate server."
-	@echo "  run                 🏃 Import agents/tools and start Orchestrate application."
-	@echo "  stop                🛑 Stop the Orchestrate server and related containers."
-	@echo "  purge               🔥 Stop *and* remove all Orchestrate containers & images."
+	@echo "  init-mcp           Clone or update watsonx-medical-mcp-server repo."
+	@echo "  update-mcp         Pull latest commit in MCP repo."
+	@echo "  mcp-setup          Build MCP virtual-env via its own Makefile."
+	@echo ""
+	@echo "  setup              Ensure BOTH components are fully installed."
+	@echo "  reinstall          Clean and rebuild both environments."
+	@echo ""
+	@echo "Orchestrate server:"
+	@echo "  start              🚀 Start the watsonx Orchestrate server."
+	@echo "  run                🏃 Import agents/tools & start Orchestrate app."
+	@echo "  stop               🛑 Stop Orchestrate server & containers."
+	@echo "  purge              🔥 Remove Orchestrate containers & images."
+	@echo ""
+	@echo "MCP server:"
+	@echo "  run-mcp            🚀 Start the MCP server (STDIO)."
 	@echo ""
 	@echo "Deploy & Ops:"
-	@echo "  deploy              Full system deploy (scripts/deploy.sh)."
-	@echo "  deploy-specialists  Update specialist agents only."
-	@echo "  health-check        Comprehensive health verification."
-	@echo "  monitor             Runtime metrics report."
-	@echo "  collab-test         Multi-agent collaboration tests."
+	@echo "  deploy             Full system deploy (scripts/deploy.sh)."
+	@echo "  deploy-specialists Update specialist agents only."
+	@echo "  health-check       Comprehensive health verification."
+	@echo "  monitor            Runtime metrics report."
+	@echo "  collab-test        Multi-agent collaboration tests."
 	@echo ""
 	@echo "Quality & Testing:"
-	@echo "  lint                flake8 + black --check."
-	@echo "  format              Format codebase with black."
-	@echo "  check-format        Verify black formatting only."
-	@echo "  test                Run pytest suite."
-	@echo "  check               Lint + tests (CI gate)."
+	@echo "  lint               flake8 + black --check."
+	@echo "  format             Auto-format with black."
+	@echo "  check-format       Verify formatting only."
+	@echo "  test               Run pytest suite."
+	@echo "  check              Lint + tests (CI gate)."
 	@echo ""
 	@echo "Docker:"
-	@echo "  docker-build        Build $(IMAGE)."
-	@echo "  docker-run          Run container (needs .env)."
-	@echo "  docker-shell        Bash into the image."
+	@echo "  docker-build       Build $(IMAGE)."
+	@echo "  docker-run         Run container (needs .env)."
+	@echo "  docker-shell       Bash into the image."
 	@echo ""
 	@echo "Cleanup:"
-	@echo "  clean               Remove virtual-env and Python cache."
+	@echo "  clean              Remove BOTH virtual-envs & Python cache."
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Clone or update the MCP repo
+#  watsonx-orchestrate — clone / update / install
+# ──────────────────────────────────────────────────────────────────────────────
+init-orch:
+	@if [ -d "$(ORCH_DIR)" ]; then \
+	  echo "✅ $(ORCH_DIR) already exists."; \
+	else \
+	  echo "⬇️  Cloning watsonx-orchestrate repo…"; \
+	  git clone --branch $(ORCH_BRANCH) --single-branch $(ORCH_REPO_URL) $(ORCH_DIR); \
+	fi
+
+update-orch:
+	@echo "🔄 Updating watsonx-orchestrate repo…"
+	@if [ -d "$(ORCH_DIR)" ]; then \
+	  cd $(ORCH_DIR) && git checkout $(ORCH_BRANCH) && git pull origin $(ORCH_BRANCH); \
+	else \
+	  echo "❌ $(ORCH_DIR) not found. Run 'make init-orch' first."; exit 1; \
+	fi
+	@echo "✅ Orchestrate repo up to date."
+
+orch-setup: init-orch
+	@echo "🏗  Setting up watsonx-orchestrate environment…"
+
+	# 1) Ensure we are on the desired branch
+	@cd $(ORCH_DIR) && git checkout $(ORCH_BRANCH) && git pull origin $(ORCH_BRANCH)
+
+	# 2) Guarantee an .env file exists inside watsonx-orchestrate/
+	@if [ ! -f "$(ORCH_DIR)/.env" ]; then \
+	  if [ -f ".env" ]; then \
+	    echo "📄 Copying root .env into $(ORCH_DIR)/.env"; \
+	    cp .env $(ORCH_DIR)/.env; \
+	  else \
+	    echo "❌ No .env found for Watsonx Orchestrate."; \
+	    echo "   Please create one (see $(ORCH_DIR)/.env.template) and rerun 'make orch-setup'."; \
+	    exit 1; \
+	  fi \
+	fi
+
+	# 3) Delegate installation to the repo’s own Makefile
+	@$(MAKE) --no-print-directory -C $(ORCH_DIR) install
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  watsonx-medical-mcp-server — clone / update / setup
 # ──────────────────────────────────────────────────────────────────────────────
 init-mcp:
 	@if [ -d "$(MCP_DIR)" ]; then \
@@ -111,136 +160,105 @@ init-mcp:
 	    echo "🔄 Updating MCP submodule…"; \
 	    git submodule update --init --recursive $(MCP_DIR); \
 	  else \
-	    echo "✅ $(MCP_DIR) directory already exists (non-submodule)."; \
+	    echo "✅ $(MCP_DIR) already exists."; \
 	  fi \
 	else \
 	  if [ -f ".gitmodules" ] && grep -q "$(MCP_DIR)" .gitmodules; then \
 	    echo "⬇️  Initialising MCP submodule…"; \
 	    git submodule update --init --recursive $(MCP_DIR); \
 	  else \
-	    echo "⬇️  Cloning MCP server repo…"; \
+	    echo "⬇️  Cloning MCP repo…"; \
 	    git clone $(MCP_REPO_URL) $(MCP_DIR); \
 	  fi \
 	fi
 
 update-mcp:
-	@echo "🔄 Pulling latest MCP server code…"
+	@echo "🔄 Updating MCP repo…"
 	@if [ -d "$(MCP_DIR)" ]; then \
 	  cd $(MCP_DIR) && git checkout main && git pull origin main; \
 	else \
 	  echo "❌ $(MCP_DIR) not found. Run 'make init-mcp' first."; exit 1; \
 	fi
-	@echo "✅ Submodule updated."
+	@echo "✅ MCP repo up to date."
+
+mcp-setup: init-mcp
+	@echo "🏗  Setting up MCP environment…"
+	@$(MAKE) --no-print-directory -C $(MCP_DIR) setup
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Virtual-env & dependencies
+#  Global setup / reinstall
 # ──────────────────────────────────────────────────────────────────────────────
-$(STAMP): init-mcp $(REQ_FILE) $(ORCH_INSTALL_SCRIPT)
-	@echo "📦 Installing MCP dependencies…"
-	@$(PYTHON_VENV) -m pip install --upgrade pip
-	@$(PYTHON_VENV) -m pip install -r $(REQ_FILE)
-	@$(PYTHON_VENV) -m pip install flake8 black pytest
-
-	@echo "🧩 Installing Watsonx Orchestrate into the same venv…"
-	@chmod +x $(ORCH_INSTALL_SCRIPT)
-	@bash -c "source $(VENV)/bin/activate && $(ORCH_INSTALL_SCRIPT)"
-
-	@touch $(STAMP)
-	@echo "✅ Environment ready."
-
-install: $(STAMP)
-
-setup: init-mcp
-	@if [ -d "$(VENV)" ]; then \
-	  echo "✅ Virtual environment exists."; \
-	  printf "   Reinstall it? [y/N] "; read ans; \
-	  if [ "$$ans" = "y" ] || [ "$$ans" = "Y" ]; then \
-	    $(MAKE) reinstall; \
-	  else \
-	    $(MAKE) install; \
-	  fi; \
-	else \
-	  echo "🔧 Creating virtual environment…"; \
-	  $(PYTHON_SYSTEM) -m venv $(VENV); \
-	  $(MAKE) install; \
-	fi
+setup: orch-setup mcp-setup
+	@echo "🎉 Both environments are ready."
 
 reinstall: clean
-	@$(PYTHON_SYSTEM) -m venv $(VENV)
-	@$(MAKE) install
+	@$(MAKE) orch-setup
+	@$(MAKE) mcp-setup
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Watsonx Orchestrate operations
+#  Orchestrate operations (delegated)
 # ──────────────────────────────────────────────────────────────────────────────
-start: setup
-	@echo "🚀 Starting the watsonx Orchestrate server…"
-	@chmod +x $(ORCH_START_SCRIPT)
-	@$(SHELL) $(ORCH_START_SCRIPT)
+start: orch-setup
+	@$(MAKE) --no-print-directory -C $(ORCH_DIR) start
 
-run: setup
-	@echo "🏃 Importing agents/tools & starting Orchestrate application…"
-	@chmod +x $(ORCH_RUN_SCRIPT)
-	@$(SHELL) $(ORCH_RUN_SCRIPT)
+run: orch-setup
+	@$(MAKE) --no-print-directory -C $(ORCH_DIR) run
 
 stop:
-	@echo "🛑 Stopping Orchestrate server & containers…"
-	@chmod +x $(ORCH_STOP_SCRIPT)
-	@$(SHELL) $(ORCH_STOP_SCRIPT)
+	@$(MAKE) --no-print-directory -C $(ORCH_DIR) stop
 
 purge:
-	@echo "🔥 Purging Orchestrate containers & images…"
-	@chmod +x $(ORCH_PURGE_SCRIPT)
-	@$(SHELL) $(ORCH_PURGE_SCRIPT)
+	@$(MAKE) --no-print-directory -C $(ORCH_DIR) purge
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MCP server (renamed target)
+#  MCP server
 # ──────────────────────────────────────────────────────────────────────────────
-run-mcp: setup
+run-mcp: mcp-setup
 	@echo "🚀 Starting MCP server…"
-	@$(PYTHON_VENV) $(SERVER_MAIN)
+	@$(MCP_PYTHON) $(SERVER_MAIN)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Deployment & Ops helper scripts
+#  Deployment & Ops helpers (use Orchestrate env for Python tooling)
 # ──────────────────────────────────────────────────────────────────────────────
-deploy: setup
+deploy: orch-setup
 	@chmod +x $(DEPLOY_SCRIPT)
 	@$(DEPLOY_SCRIPT)
 
-deploy-specialists: setup
+deploy-specialists: orch-setup
 	@chmod +x $(DEPLOY_SPECIALISTS)
 	@$(DEPLOY_SPECIALISTS)
 
-health-check: setup
+health-check: orch-setup
 	@chmod +x $(SYSTEM_HEALTH_CHECK)
 	@$(SYSTEM_HEALTH_CHECK)
 
-monitor: setup
-	@$(PYTHON_VENV) $(MONITOR_SCRIPT)
+monitor: orch-setup
+	@$(ORCH_PYTHON) $(MONITOR_SCRIPT)
 
-collab-test: setup
-	@$(PYTHON_VENV) $(COLLAB_TEST_SCRIPT)
+collab-test: orch-setup
+	@$(ORCH_PYTHON) $(COLLAB_TEST_SCRIPT)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Quality gates
+#  Quality gates (run under Orchestrate env)
 # ──────────────────────────────────────────────────────────────────────────────
-lint: setup
-	@$(PYTHON_VENV) -m flake8 .
-	@$(PYTHON_VENV) -m black --check .
+lint: orch-setup
+	@$(ORCH_PYTHON) -m flake8 .
+	@$(ORCH_PYTHON) -m black --check .
 
-format: setup
-	@$(PYTHON_VENV) -m black .
+format: orch-setup
+	@$(ORCH_PYTHON) -m black .
 
-check-format: setup
-	@$(PYTHON_VENV) -m black --check .
+check-format: orch-setup
+	@$(ORCH_PYTHON) -m black --check .
 
-test: setup
+test: orch-setup
 	@WATSONX_APIKEY=dummy PROJECT_ID=dummy \
-	  $(PYTHON_VENV) -m pytest -v
+	  $(ORCH_PYTHON) -m pytest -v
 
 check: lint test
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Docker
+#  Docker
 # ──────────────────────────────────────────────────────────────────────────────
 docker-build:
 	@docker build --progress=plain -t $(IMAGE) .
@@ -261,10 +279,11 @@ docker-shell: docker-build
 	  $(IMAGE)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Cleanup
+#  Clean up
 # ──────────────────────────────────────────────────────────────────────────────
 clean:
-	@rm -rf $(VENV) .pytest_cache .mypy_cache
+	@echo "🧹 Removing virtual-envs & caches…"
+	@rm -rf $(ORCH_VENV) $(MCP_VENV) .pytest_cache .mypy_cache
 	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	@echo "✅ Cleanup complete."

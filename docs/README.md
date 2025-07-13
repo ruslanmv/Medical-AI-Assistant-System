@@ -86,11 +86,57 @@ MCP server ready for STDIO transport...
 
 ### Step 1: Install watsonx Orchestrate ADK
 To avoid merge the custom MCP Server Python enviroment and
-the Watsxonx Orchestrate Server, lets go to the root folder.
-  
+the Watsonx Orchestrate Server we need to install it serparated it.
+
+Lets go to the root folder.
+and lets clone the installer that might be useful.  
 ```bash
 # Install the ADK
-pip install ibm-watsonx-orchestrate
+git clone --branch automatic --single-branch \
+  https://github.com/ruslanmv/Installer-Watsonx-Orchestrate.git watsonx-orchestrate
+```
+
+
+```
+cd watsonx-orchestrate
+```
+
+
+
+The installer requires a .env file in the project root to configure your IBM credentials.
+
+A. Create a file named .env in the watsonx-orchestrate directory.
+
+B. Copy one of the templates below into your .env file, depending on your account type.
+
+Template for a watsonx Orchestrate Account:
+
+# For watsonx Orchestrate (SaaS) accounts
+WO_DEVELOPER_EDITION_SOURCE=orchestrate
+WO_INSTANCE=https://api.us-east.watson-orchestrate.ibm.com/instances/your-instance-id
+WO_API_KEY=your-orchestrate-api-key
+Template for a watsonx.ai Account:
+
+# For watsonx.ai (BYOA) accounts on IBM Cloud
+WO_DEVELOPER_EDITION_SOURCE=myibm
+WO_ENTITLEMENT_KEY=your-entitlement-key
+WATSONX_APIKEY=your-watsonx-api-key
+WATSONX_SPACE_ID=your-watsonx.ai-space-id
+C. Replace the placeholder values (your-...) with your actual credentials.
+
+4. Run the Installer
+With your .env file configured, run the main installation command from the project root.
+
+
+
+```
+make install
+```
+
+
+
+
+
 
 # Verify installation
 orchestrate --version
