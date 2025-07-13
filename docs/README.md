@@ -79,13 +79,15 @@ Starting Watsonx Medical Assistant v1.0.0
 Using model: meta-llama/llama-3-2-90b-vision-instruct
 MCP server ready for STDIO transport...
 ```
-
+![](assets/2025-07-13-10-39-05.png)
 ---
 
 ## Part 2: Setting Up watsonx Orchestrate ADK
 
 ### Step 1: Install watsonx Orchestrate ADK
-
+To avoid merge the custom MCP Server Python enviroment and
+the Watsxonx Orchestrate Server, lets go to the root folder.
+  
 ```bash
 # Install the ADK
 pip install ibm-watsonx-orchestrate
@@ -178,10 +180,11 @@ You should see:
 ---
 
 ## Part 4: Creating and Deploying the Medical Agent
+Create a folder `agents` in the root folder where we will create all our YAML definitions for all agents.
 
 ### Step 1: Create Agent Configuration
 
-Create a file named `medical_agent.yaml` with the following content:
+Create a file named `agents/medical_agent.yaml` with the following content:
 
 ```yaml
 spec_version: v1
@@ -238,7 +241,7 @@ tools:
 
 ```bash
 # Import the medical agent
-orchestrate agents import -f medical_agent.yaml
+orchestrate agents import -f ./agents/medical_agent.yaml
 
 # Verify agent import
 orchestrate agents list
@@ -323,7 +326,7 @@ orchestrate toolkits import \
   --app-id watsonx_medical_assistant
 
 # 4. Re-import the agent
-orchestrate agents import -f medical_agent.yaml
+orchestrate agents import -f ./agents/medical_agent.yaml
 ```
 
 ### Production Deployment Considerations
@@ -1472,15 +1475,15 @@ agents=(
   "emergency_triage_agent"
 )
 
-mkdir -p medical_agents
+mkdir -p agents
 
 for agent in "${agents[@]}"; do
   echo "🤖 Importing ${agent}..."
-  if [ -f "medical_agents/${agent}.yaml" ]; then
-    orchestrate agents import -f "medical_agents/${agent}.yaml"
+  if [ -f "agents/${agent}.yaml" ]; then
+    orchestrate agents import -f "agents/${agent}.yaml"
     echo "✅ ${agent} imported successfully"
   else
-    echo "⚠️  Warning: medical_agents/${agent}.yaml not found"
+    echo "⚠️  Warning: agents/${agent}.yaml not found"
   fi
 done
 
@@ -1664,16 +1667,16 @@ agents=(
   "emergency_triage_agent"
 )
 
-mkdir -p medical_agents
+mkdir -p agents
 
 # Import loop
 for agent in "${agents[@]}"; do
   echo "🤖 Importing ${agent}..."
-  if [ -f "medical_agents/${agent}.yaml" ]; then
-    orchestrate agents import -f "medical_agents/${agent}.yaml"
+  if [ -f "agents/${agent}.yaml" ]; then
+    orchestrate agents import -f "agents/${agent}.yaml"
     echo "✅ ${agent} imported successfully"
   else
-    echo "⚠️  Warning: ${agent}.yaml not found in medical_agents directory"
+    echo "⚠️  Warning: ${agent}.yaml not found in agents directory"
   fi
 done
 
@@ -1879,7 +1882,7 @@ if __name__ == "__main__":
 Centralize your agent settings in a single YAML file:
 
 ```yaml
-# medical_agents_config.yaml
+# agents_config.yaml
 medical_system:
   version: "1.0.0"
   description: "Comprehensive Medical AI Assistant System"
@@ -1999,7 +2002,7 @@ orchestrate toolkits import \
 
 # 6. Create specialist directory
 echo "📁 Creating medical agents directory..."
-mkdir -p medical_agents
+mkdir -p agents
 
 # 7. Deploy specialist agents
 echo "🏥 Deploying medical specialist agents..."
@@ -2020,13 +2023,13 @@ declare -a agents=(
 
 for agent in "${agents[@]}"; do
     echo "🤖 Importing ${agent}..."
-    if [ -f "medical_agents/${agent}.yaml" ]; then
-        orchestrate agents import -f "medical_agents/${agent}.yaml"
+    if [ -f "agents/${agent}.yaml" ]; then
+        orchestrate agents import -f "agents/${agent}.yaml"
         echo "✅ ${agent} imported successfully"
     else
-        echo "⚠️  Warning: ${agent}.yaml not found in medical_agents directory"
+        echo "⚠️  Warning: ${agent}.yaml not found in agents directory"
         echo "   Creating template file..."
-        cat > "medical_agents/${agent}.yaml" << EOF
+        cat > "agents/${agent}.yaml" << EOF
 spec_version: v1
 kind: native
 name: ${agent}

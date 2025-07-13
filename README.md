@@ -216,36 +216,45 @@ and publish with `-p 8000:8000`.
 
 ---
 
-## 🧰 Makefile Cheat-Sheet
+### 🧰 Makefile Cheat-Sheet
+
 
 ```text
-# Bootstrap
-make setup             # Clone MCP repo (or submodule) + create .venv + install deps
-make init-mcp          # Ensure watsonx-medical-mcp-server code is present (clone / submodule)
-make update-mcp        # Pull latest commit inside the MCP submodule
-make reinstall         # Re-create the virtual-env from scratch
+# ── Bootstrap ───────────────────────────────────────────────────────────────
+make setup              # Install/verify BOTH envs → ./venv (Orch) + MCP/.venv
+make orch-setup         # Create ./venv and install Watsonx Orchestrate only
+make mcp-setup          # Create watsonx-medical-mcp-server/.venv only
+make init-mcp           # Ensure MCP repo present (clone / submodule)
+make update-mcp         # Pull latest commit inside MCP repo
+make reinstall          # Wipe both envs and rebuild from scratch
 
-# Development
-make run               # Start MCP server (STDIO)
-make lint              # flake8 + black --check
-make format            # Auto-format with black
-make test              # Run pytest suite
-make check             # Lint + tests (CI green-light)
+# ── Servers & Application ───────────────────────────────────────────────────
+make start              # 🚀 Start the watsonx Orchestrate server (Docker-compose)
+make run                # 🏃 Import agents/tools & launch Orchestrate app
+make stop               # 🛑 Stop Orchestrate server & containers
+make purge              # 🔥 Remove ALL Orchestrate containers & images
+make run-mcp            # 🚀 Start the MCP server locally (STDIO)
 
-# Deploy & Ops
-make deploy            # Full deploy (toolkit + 12 agents)
-make deploy-specialists# Import / update specialist agents only
-make health-check      # Comprehensive system health verification
-make monitor           # Runtime metrics / performance report
-make collab-test       # Multi-agent collaboration tests
+# ── Development Workflow ────────────────────────────────────────────────────
+make lint               # flake8 + black --check  (uses ./venv)
+make format             # Auto-format with black
+make test               # Run pytest suite
+make check              # Lint + tests (CI green-light)
 
-# Docker
-make docker-build      # Build Docker image (python:3.11-slim)
-make docker-run        # Run container with .env creds
-make docker-shell      # Drop into /bin/bash inside container
+# ── Deploy & Ops Helpers ────────────────────────────────────────────────────
+make deploy             # One-command full deploy (toolkit + 12 agents)
+make deploy-specialists # Import / update specialist agents only
+make health-check       # Comprehensive system health verification
+make monitor            # Runtime metrics / performance report
+make collab-test        # Multi-agent collaboration tests
 
-# House-keeping
-make clean             # Remove .venv + Python caches
+# ── Docker Convenience ──────────────────────────────────────────────────────
+make docker-build       # Build application image (python:3.11-slim base)
+make docker-run         # Run container (requires .env with creds)
+make docker-shell       # Drop into /bin/bash inside the image
+
+# ── House-keeping ───────────────────────────────────────────────────────────
+make clean              # Remove BOTH virtual-envs & Python caches
 ```
 
 

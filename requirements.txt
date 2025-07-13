@@ -1,8 +1,7 @@
 # ────────────────────────────────────────────────
 # Runtime
 # ────────────────────────────────────────────────
-ibm-watsonx-orchestrate==1.6.2   # ADK core
-python-dotenv>=1.0.0
+ibm-watsonx-orchestrate==1.6.1   # ADK core
 
 # ────────────────────────────────────────────────
 # CLI / Utility
