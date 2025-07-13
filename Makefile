@@ -2,10 +2,8 @@
 #
 # Two independent components
 # ─────────────────────────
-# 1. watsonx-orchestrate        → cloned into ./watsonx-orchestrate
-#    • Its own Makefile and venv (./watsonx-orchestrate/venv)
-# 2. watsonx-medical-mcp-server → cloned / submodule in ./watsonx-medical-mcp-server
-#    • Its own Makefile and venv (./watsonx-medical-mcp-server/.venv)
+# 1. watsonx-orchestrate        → ./watsonx-orchestrate  (submodule + venv)
+# 2. watsonx-medical-mcp-server → ./watsonx-medical-mcp-server (submodule + venv)
 # ------------------------------------------------------------------------------
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -68,11 +66,11 @@ help:
 	@echo "Makefile — Medical AI Assistant System"
 	@echo ""
 	@echo "Bootstrap:"
-	@echo "  init-orch          Clone watsonx-orchestrate installer repo."
+	@echo "  init-orch          Add/update watsonx-orchestrate as GIT submodule."
 	@echo "  update-orch        Pull latest commit in watsonx-orchestrate."
 	@echo "  orch-setup         Install watsonx-orchestrate (branch 'automatic')."
 	@echo ""
-	@echo "  init-mcp           Clone or update watsonx-medical-mcp-server repo."
+	@echo "  init-mcp           Add/update watsonx-medical-mcp-server submodule."
 	@echo "  update-mcp         Pull latest commit in MCP repo."
 	@echo "  mcp-setup          Build MCP virtual-env via its own Makefile."
 	@echo ""
@@ -111,14 +109,21 @@ help:
 	@echo "  clean              Remove BOTH virtual-envs & Python cache."
 
 # ──────────────────────────────────────────────────────────────────────────────
-#  watsonx-orchestrate — clone / update / install
+#  watsonx-orchestrate — clone / submodule / install
 # ──────────────────────────────────────────────────────────────────────────────
+define add-orch-submodule
+	echo "🔗 Adding $(ORCH_DIR) as a git submodule (branch '$(ORCH_BRANCH)')"; \
+	git submodule add -f -b $(ORCH_BRANCH) $(ORCH_REPO_URL) $(ORCH_DIR); \
+	git submodule update --init --recursive $(ORCH_DIR)
+endef
+
 init-orch:
-	@if [ -d "$(ORCH_DIR)" ]; then \
-	  echo "✅ $(ORCH_DIR) already exists."; \
+	@# Check if the submodule is already properly registered and initialized.
+	@if git submodule status --quiet $(ORCH_DIR) 2>/dev/null; then \
+	  echo "✅ $(ORCH_DIR) is already a git submodule."; \
 	else \
-	  echo "⬇️  Cloning watsonx-orchestrate repo…"; \
-	  git clone --branch $(ORCH_BRANCH) --single-branch $(ORCH_REPO_URL) $(ORCH_DIR); \
+	  echo "⚠️  $(ORCH_DIR) not initialized or not a submodule. Setting it up now..."; \
+	  $(call add-orch-submodule); \
 	fi
 
 update-orch:
@@ -132,11 +137,9 @@ update-orch:
 
 orch-setup: init-orch
 	@echo "🏗  Setting up watsonx-orchestrate environment…"
-
-	# 1) Ensure we are on the desired branch
 	@cd $(ORCH_DIR) && git checkout $(ORCH_BRANCH) && git pull origin $(ORCH_BRANCH)
 
-	# 2) Guarantee an .env file exists inside watsonx-orchestrate/
+	# Ensure .env present
 	@if [ ! -f "$(ORCH_DIR)/.env" ]; then \
 	  if [ -f ".env" ]; then \
 	    echo "📄 Copying root .env into $(ORCH_DIR)/.env"; \
@@ -148,7 +151,7 @@ orch-setup: init-orch
 	  fi \
 	fi
 
-	# 3) Delegate installation to the repo’s own Makefile
+	# Delegate install to the repo’s own Makefile
 	@$(MAKE) --no-print-directory -C $(ORCH_DIR) install
 
 # ──────────────────────────────────────────────────────────────────────────────
