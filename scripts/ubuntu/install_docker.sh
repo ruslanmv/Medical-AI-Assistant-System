@@ -26,7 +26,6 @@ print_header() {
 }
 
 ### ── PRECHECKS ───────────────────────────────────────────────────────────
-# FIX 1: Generalize the OS check for any Ubuntu or Debian version.
 # Source /etc/os-release to get the OS ID
 if [ -f /etc/os-release ]; then
     # shellcheck source=/dev/null
@@ -55,6 +54,14 @@ if command -v docker &> /dev/null; then
     existing_version=$(docker --version)
     print_header "Docker Already Installed"
     print_color "$YELLOW" "Detected: $existing_version"
+
+    # ── FIX: Skip interactive prompt in CI environments ────────────────
+    # If we're running under CI (e.g. GitHub Actions), just exit success.
+    if [[ -n "${CI:-}" ]]; then
+        print_color "$GREEN" "ⓘ CI environment detected, skipping Docker installation."
+        exit 0
+    fi
+
     read -rp "Do you want to reinstall Docker completely? [y/N]: " confirm
     if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
         print_color "$GREEN" "No changes made. Exiting."
@@ -80,7 +87,6 @@ add_docker_repo() {
     print_header "Adding Docker’s official repository"
     install -m 0755 -d /etc/apt/keyrings
     
-    # FIX 2: Use the detected OS ID ($ID) to form the correct URL.
     curl -fsSL "https://download.docker.com/linux/${ID}/gpg" \
         | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
