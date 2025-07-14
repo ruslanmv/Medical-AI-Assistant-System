@@ -42,7 +42,7 @@ llm: watsonx/meta-llama/llama-3-2-90b-vision-instruct
 style: default
 collaborators: []
 tools:
-  - chat_with_watsonx
-  - analyze_medical_symptoms
-  - clear_conversation_history
-  - get_conversation_summary
+  - watsonx_medical_assistant:chat_with_watsonx
+  - watsonx_medical_assistant:analyze_medical_symptoms
+  - watsonx_medical_assistant:clear_conversation_history
+  - watsonx_medical_assistant:get_conversation_summary

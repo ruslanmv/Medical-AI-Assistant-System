@@ -101,7 +101,7 @@ git clone --branch automatic --single-branch \
 cd watsonx-orchestrate
 ```
 
-
+### Step 2: Set Up watsonx Orchestrate Developer Edition
 
 The installer requires a .env file in the project root to configure your IBM credentials.
 
@@ -134,38 +134,36 @@ make install
 ```
 
 
-
-
-
-
 # Verify installation
+```
 orchestrate --version
 ```
+![](assets/2025-07-13-19-37-00.png)
+For a complete explanation of installation you can follow this [simple tutorial](https://ruslanmv.com/blog/hello-watsonx-orchestrate) to install it.
 
-For a complete explanation of instllation you can follow this [simple tutorial](https://ruslanmv.com/blog/hello-watsonx-orchestrate) to install it.
 
-
-### Step 2: Set Up watsonx Orchestrate Developer Edition
-
-Create a `.env` file for watsonx Orchestrate:
-
-```dotenv
-# wxo.env
-WO_DEVELOPER_EDITION_SOURCE=orchestrate
-WO_INSTANCE=<your_service_instance_url>
-WO_API_KEY=<your_wxo_api_key>
-WO_DEVELOPER_EDITION_SKIP_LOGIN=false
-```
 
 ### Step 3: Start watsonx Orchestrate Developer Edition
 
 ```bash
 # Start the local server
-orchestrate server start -e wxo.env
+orchestrate server start -e .env
+```
+![](assets/2025-07-13-19-39-13.png)
 
 # Activate the local environment
+```bash
 orchestrate env activate local
 ```
+![](assets/2025-07-13-19-39-46.png)
+
+##  Start chatting
+To start the UI service and begin chatting type
+
+```bash
+orchestrate chat start
+```
+![](assets/2025-07-13-19-42-19.png)
 
 Access the services:
 
@@ -173,6 +171,148 @@ Access the services:
 * **API Docs:** [http://localhost:4321/docs](http://localhost:4321/docs)
 * **API Base:** [http://localhost:4321/api/v1](http://localhost:4321/api/v1)
 
+
+# MCP Imports
+
+Here’s how you can get the **Astral uv** CLI installed on Ubuntu 22.04 and immediately start using your `pyproject.toml`-based workflow:
+
+---
+
+## 1. Prerequisites
+
+Make sure you have Python 3 and the ability to create isolated environments:
+
+```bash
+sudo apt update
+sudo apt install -y python3 python3-pip python3-venv curl
+```
+
+---
+
+## 2. Install uv
+
+You have several options—pick the one you like best:
+
+### A) Standalone installer (recommended)
+
+This drops a self-contained `uv` binary into `~/.local/bin`:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+> **Note:** If you don’t have `curl`, you can use `wget -qO- https://astral.sh/uv/install.sh \| sh`. ([Astral Docs][1])
+
+After that, ensure `~/.local/bin` is in your `PATH` (most distros do this automatically).
+
+![](assets/2025-07-14-11-09-13.png)
+
+
+
+### B) Via pipx (isolated, upgrade-easy)
+
+```bash
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath
+# restart your shell (or `exec $SHELL`)
+pipx install uv
+```
+
+This keeps `uv` upgradable with `pipx upgrade uv`. 
+
+### C) Via pip (global or venv)
+
+```bash
+pip install uv
+```
+
+If you choose this, consider doing it inside a dedicated venv so it doesn’t collide with other tools.
+
+---
+
+## 3. Verify
+
+```bash
+uv --version
+```
+
+You should see something like `uv 0.7.20` (or later).
+![](assets/2025-07-14-11-09-36.png)
+---
+
+## 4. Start a pyproject.toml–driven project
+
+1. **Initialize**
+
+   ```bash
+   mkdir myproject && cd myproject
+   uv init
+   ```
+
+   This creates a `pyproject.toml`, a lockfile (`uv.lock`), and a `.venv/` for you 
+
+2. **Add dependencies**
+
+   ```bash
+   uv add requests
+   ```
+
+   This both installs `requests` into your `.venv` and adds it under `[project]` → `dependencies` in `pyproject.toml`
+
+3. **Run scripts or shell**
+
+   ```bash
+   uv run python                         # drops you into the venv’s Python REPL
+   uv run pytest                         # runs pytest in the project environment
+   ```
+
+---
+
+### Why not snap’s `astral-uv`?
+
+Ubuntu’s suggestion `sudo snap install astral-uv` will indeed give you a `uv` command—but it’s just a community snap of the same tool. The official installer or pipx approach is better for keeping up to date with releases and integrating cleanly into your shell.
+
+
+## Loading Watsonx Medical MCP server
+Here’s how to bootstrap your project’s environment from an existing `pyproject.toml` and then run `server.py`:
+
+1. **Synchronize (or install) your dependencies**
+
+   * If you already have a lockfile (`uv.lock`) or you want to generate one and install from it, run:
+
+     ```bash
+     cd watsonx-medical-mcp-server
+     uv sync
+     ```
+
+     This will create `.venv/`, generate/update `uv.lock` from your `pyproject.toml`, and install all declared dependency groups into that venv .
+   * Alternatively, if you’d rather bypass the lockfile and install straight from `pyproject.toml`, use:
+
+     ```bash
+     uv install
+     ```
+
+     (By default this installs all dependency groups; to skip dev-only deps: `uv install --no-group dev`).
+
+2. **Run your script**
+   The simplest way is to let `uv` handle activation and syncing for you in one step:
+
+   ```bash
+   uv run server.py
+   ```
+
+   Under the hood, `uv run` will ensure the lockfile and `.venv` are up-to-date before executing your script in the isolated environment 
+
+3. **(Optional) Activate the venv manually**
+   If you prefer to drop into the shell yourself:
+
+   ```bash
+   uv sync
+   source .venv/bin/activate
+   python server.py
+   ```
+
+   This gives you a normal REPL with all your dependencies already installed 
 ---
 
 ## Part 3: Integrating MCP Server with watsonx Orchestrate
@@ -182,28 +322,116 @@ Access the services:
 ```bash
 # Create a connection for the MCP server
 orchestrate connections add --app-id watsonx_medical_assistant
-
-# Configure the connection
-orchestrate connections configure \
-  --app-id watsonx_medical_assistant \
-  --env draft \
-  --kind key_value \
-  --type team
 ```
 
+![](assets/2025-07-13-20-24-59.png)
+
+### Configure the connection
+
+```bash
+orchestrate connections configure --app-id watsonx_medical_assistant --env draft --kind key_value --type team
+```
+![](assets/2025-07-13-21-00-24.png)
 ### Step 2: Import MCP Server as Toolkit
 
 ```bash
-cd /path/to/watsonx-medical-mcp-server
+cd watsonx-medical-mcp-server
+```
+### Step 2: Add Environment Variables to Connection (Reading from .env file)
 
-# Import the MCP server as a toolkit
+
+Since your MCP server needs environment variables and we shouldn't expose sensitive data in terminal commands, let's read from your .env file using the correct set-credentials command:
+
+
+```bash
+# Load environment variables from .env file and add them to the connection
+source .env
+
+# Add credentials using the correct set-credentials command with -e flag
+orchestrate connections set-credentials \
+    --app-id watsonx_medical_assistant \
+    --env draft \
+    -e WATSONX_APIKEY="$WATSONX_APIKEY" \
+    -e PROJECT_ID="$PROJECT_ID" \
+    -e WATSONX_URL="$WATSONX_URL" \
+    -e MODEL_ID="$MODEL_ID"
+```
+Alternative approach using a script:
+
+Create a script file `setup_connection.sh`:
+
+```bash
+#!/bin/bash
+
+# Load environment variables from .env file
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+else
+    echo "Error: .env file not found"
+    exit 1
+fi
+
+# Configure connection with environment variables using the correct command
+orchestrate connections set-credentials \
+    --app-id watsonx_medical_assistant \
+    --env draft \
+    -e WATSONX_APIKEY="$WATSONX_APIKEY" \
+    -e PROJECT_ID="$PROJECT_ID" \
+    -e WATSONX_URL="$WATSONX_URL" \
+    -e MODEL_ID="$MODEL_ID"
+
+echo "Connection configuration completed successfully!"
+```
+
+![](assets/2025-07-14-08-52-32.png)
+## Step 3: Import MCP Server as Toolkit 
+Be sure that you are in the correct folder
+```bash
+cd watsonx-medical-mcp-server
+```
+Import with package-root pointing to current directory
+
+Use this step-by-step approach:
+
+```bash
 orchestrate toolkits import \
   --kind mcp \
   --name watsonx_medical_assistant \
-  --description "Medical assistant powered by IBM watsonx.ai for symptom analysis and health consultations" \
-  --command "python server.py" \
-  --tools "*" \
+  --description "Medical assistant powered by IBM watsonx.ai" \
+  --package-root /mnt/c/blog/Medical-AI-Assistant-System/watsonx-medical-mcp-server \
+  --command '["python", "server.py", "--transport", "stdio"]' \
+  --tools "chat_with_watsonx" \
+  --language python \
   --app-id watsonx_medical_assistant
+```
+You will get the message
+```bash
+[INFO] - Successfully imported tool kit watsonx_medical_assistant
+```
+# 6. Verify import
+orchestrate toolkits list
+![](assets/2025-07-14-12-38-40.png)
+orchestrate tools list
+![](assets/2025-07-14-12-39-09.png)
+
+Now let add all tools
+
+# 7. Clean up any previous attempts
+orchestrate toolkits remove -n watsonx_medical_assistant 2>/dev/null || true
+
+
+### Import the MCP server as a toolkit
+
+```bash
+orchestrate toolkits import \
+  --kind mcp \
+  --name watsonx_medical_assistant \
+  --description "Medical assistant powered by IBM watsonx.ai" \
+  --package-root /mnt/c/blog/Medical-AI-Assistant-System/watsonx-medical-mcp-server \
+  --command '["python", "server.py", "--transport", "stdio"]' \
+  --language python \
+  --app-id watsonx_medical_assistant \
+  --tools "*"
 ```
 
 ### Step 3: Verify Toolkit Import
@@ -211,7 +439,10 @@ orchestrate toolkits import \
 ```bash
 # List imported toolkits
 orchestrate toolkits list
+```
+![](assets/2025-07-14-12-46-32.png)
 
+```bash
 # List available tools
 orchestrate tools list
 ```
@@ -277,21 +508,26 @@ llm: watsonx/meta-llama/llama-3-2-90b-vision-instruct
 style: default
 collaborators: []
 tools:
-  - chat_with_watsonx
-  - analyze_medical_symptoms
-  - clear_conversation_history
-  - get_conversation_summary
+  - watsonx_medical_assistant:chat_with_watsonx
+  - watsonx_medical_assistant:analyze_medical_symptoms
+  - watsonx_medical_assistant:clear_conversation_history
+  - watsonx_medical_assistant:get_conversation_summary
 ```
 
 ### Step 2: Import the Agent
-
+Go to to the root directory 
 ```bash
 # Import the medical agent
 orchestrate agents import -f ./agents/medical_agent.yaml
+```
+![](assets/2025-07-14-12-59-36.png)
 
+```bash
 # Verify agent import
 orchestrate agents list
 ```
+
+![](assets/2025-07-14-13-01-13.png)
 
 ### Step 3: Test the Integration
 
@@ -303,19 +539,23 @@ orchestrate chat start
 ---
 
 ## Part 5: Testing Your Medical Assistant
-
+![](assets/2025-07-14-13-12-40.png)
 ### Test Scenarios
 
 * **General Health Query:**
 
   * User: “What are the benefits of regular exercise?”
+
+![](assets/2025-07-14-13-16-27.png)
+
 * **Symptom Analysis:**
 
   * User: “I’ve been having headaches and feeling dizzy for the past two days. I’m 35 years old.”
-* **Conversation Management:**
 
-  * User: “Can you summarize our conversation so far?”
-  * User: “Please clear our conversation history.”
+
+![](assets/2025-07-14-13-18-19.png)
+
+
 
 ### Expected Responses
 
@@ -327,6 +567,14 @@ The agent should:
 4. Maintain conversation context
 5. Offer structured, actionable advice
 
+
+In the first converstation 
+![](assets/2025-07-14-13-17-49.png)
+
+
+In the second conversation
+
+![](assets/2025-07-14-13-18-50.png)
 ---
 
 ## Part 6: Advanced Configuration
@@ -363,18 +611,18 @@ orchestrate toolkit remove -n watsonx_medical_assistant
 #    Make your changes to server.py
 
 # 3. Re-import the toolkit
+
+```bash
 orchestrate toolkits import \
   --kind mcp \
   --name watsonx_medical_assistant \
-  --description "Updated medical assistant" \
-  --command "python server.py" \
-  --tools "*" \
-  --app-id watsonx_medical_assistant
-
-# 4. Re-import the agent
-orchestrate agents import -f ./agents/medical_agent.yaml
+  --description "Medical assistant powered by IBM watsonx.ai" \
+  --package-root /mnt/c/blog/Medical-AI-Assistant-System/watsonx-medical-mcp-server \
+  --command '["python", "server.py", "--transport", "stdio"]' \
+  --language python \
+  --app-id watsonx_medical_assistant \
+  --tools "*"
 ```
-
 ### Production Deployment Considerations
 
 * **Security:** Use proper authentication and secure API keys
@@ -385,53 +633,6 @@ orchestrate agents import -f ./agents/medical_agent.yaml
 
 ---
 
-## Part 7: Troubleshooting
-
-### Common Issues
-
-* **MCP Server Won’t Start:**
-
-  ```bash
-  # Check Python version
-  python --version
-
-  # Verify dependencies
-  pip list
-
-  # Check environment variables
-  cat .env
-  ```
-
-* **Toolkit Import Fails:**
-
-  ```bash
-  # Verify MCP server is running
-  python server.py
-
-  # Check toolkit command path
-  which python
-  ```
-
-* **Agent Can't Access Tools:**
-
-  ```bash
-  # List available tools
-  orchestrate tools list
-
-  # Check agent configuration
-  orchestrate agents list
-  ```
-
-### Debug Mode
-
-Enable debug mode for detailed logging:
-
-```bash
-orchestrate --debug toolkits import [options]
-orchestrate --debug agents import [options]
-```
-
----
 
 ## Part 8: Complete Code Reference
 
@@ -785,9 +986,6 @@ def get_server_info() -> str:
     """
 ```
 
-
-
-
 ## Defining Core Prompts for Medical AI Assistant
 
 We use `@mcp.prompt()` decorators to generate structured prompts for both medical consultations and health education.
@@ -913,7 +1111,7 @@ Automates virtual environment setup, dependencies, testing, and cleanup.
 .PHONY: setup run test clean install-deps activate
 
 # Default Python version
-PYTHON := python3.11
+PYTHON := python3.12
 VENV_DIR := .venv
 REQUIREMENTS := requirements.txt
 

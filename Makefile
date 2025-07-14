@@ -111,19 +111,19 @@ help:
 # ──────────────────────────────────────────────────────────────────────────────
 #  watsonx-orchestrate — clone / submodule / install
 # ──────────────────────────────────────────────────────────────────────────────
-define add-orch-submodule
-	echo "🔗 Adding $(ORCH_DIR) as a git submodule (branch '$(ORCH_BRANCH)')"; \
-	git submodule add -f -b $(ORCH_BRANCH) $(ORCH_REPO_URL) $(ORCH_DIR); \
-	git submodule update --init --recursive $(ORCH_DIR)
-endef
-
 init-orch:
-	@# Check if the submodule is already properly registered and initialized.
 	@if git submodule status --quiet $(ORCH_DIR) 2>/dev/null; then \
-	  echo "✅ $(ORCH_DIR) is already a git submodule."; \
+		echo "✅ $(ORCH_DIR) is already a git submodule."; \
 	else \
-	  echo "⚠️  $(ORCH_DIR) not initialized or not a submodule. Setting it up now..."; \
-	  $(call add-orch-submodule); \
+		echo "⚠️  $(ORCH_DIR) not initialized or not a submodule. Setting it up now..."; \
+		echo "🔗 Adding $(ORCH_DIR) as a git submodule (branch '$(ORCH_BRANCH)')"; \
+		git submodule add -f -b $(ORCH_BRANCH) $(ORCH_REPO_URL) $(ORCH_DIR); \
+		echo "🔧 Verifying submodule configuration..."; \
+		git config -f .gitmodules submodule.$(ORCH_DIR).url $(ORCH_REPO_URL); \
+		git config -f .gitmodules submodule.$(ORCH_DIR).branch $(ORCH_BRANCH); \
+		echo "🔄 Initializing and synchronizing submodule..."; \
+		git submodule sync --quiet --recursive; \
+		git submodule update --init --recursive; \
 	fi
 
 update-orch:
