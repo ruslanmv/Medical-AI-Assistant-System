@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Appointment Scheduler
+  version: "1.0"
+paths:
+  /appointments:
+    post:
+      operationId: schedule_appointment
+      summary: Schedule an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                specialty: { type: string }
+                patient_name: { type: string }
+                preferred_time: { type: string }
+                location: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  confirmation_id: { type: string }
+                  time: { type: string }
+                  location: { type: string }

@@ -1,0 +1,13 @@
+spec_version: v1
+kind: connection
+name: drug_interactions_api
+description: Connection for external drug interactions service (replace with real endpoint/auth).
+environments:
+  draft:
+    kind: basic
+    type: team
+    server_url: https://api.example.com/drug-interactions
+    auth:
+      scheme: API_KEY
+      header_name: Authorization
+      header_value_template: "Bearer ${DRUG_API_KEY}"

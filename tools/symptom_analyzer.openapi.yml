@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Symptom Analyzer
+  version: "1.0"
+paths:
+  /analyze:
+    post:
+      operationId: analyze_medical_symptoms
+      summary: Analyze symptoms and extract structured fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entities:
+                    type: array
+                    items: { type: string }
+                  urgency: { type: string }
+                  red_flags: { type: array, items: { type: string } }

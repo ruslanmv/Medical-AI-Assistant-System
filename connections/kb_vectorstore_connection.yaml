@@ -1,0 +1,15 @@
+spec_version: v1
+kind: connection
+name: kb_vectorstore
+description: Vector database connection for medical knowledge retrieval.
+environments:
+  draft:
+    kind: basic
+    type: team
+    server_url: ${KB_ENDPOINT}
+    auth:
+      scheme: API_KEY
+      header_name: Authorization
+      header_value_template: "Api-Key ${KB_API_KEY}"
+    config:
+      index_name: ${KB_INDEX_NAME}

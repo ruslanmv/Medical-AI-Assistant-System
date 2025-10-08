@@ -1,0 +1,8 @@
+spec_version: v1
+kind: knowledge_base
+name: trusted_medical_kb
+description: Curated guidelines and patient education (WHO, CDC, NICE, UpToDate-like summaries)
+documents:
+  - url: https://www.who.int/
+  - url: https://www.cdc.gov/
+  - url: https://www.nice.org.uk/

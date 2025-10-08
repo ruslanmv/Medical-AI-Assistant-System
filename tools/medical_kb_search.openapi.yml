@@ -1,0 +1,30 @@
+openapi: 3.0.3
+info:
+  title: Medical Knowledge Search
+  version: "1.0"
+paths:
+  /search:
+    get:
+      operationId: medical_kb_search
+      summary: Search trusted medical guidelines
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title: { type: string }
+                        url: { type: string }
+                        snippet: { type: string }
